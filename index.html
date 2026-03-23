@@ -747,6 +747,7 @@
   <div class="tab" onclick="switchTab('schedule')">SCHEDULE</div>
   <div class="tab" onclick="switchTab('standings')">STANDINGS</div>
   <div class="tab" onclick="switchTab('profiles')">PROFILES</div>
+  <div class="tab" onclick="switchTab('leaderboard')">LEADERBOARD</div>
 </div>
 
 <main>
@@ -877,6 +878,40 @@
     </div>
     <div id="profile-content">
       <div class="empty-state">Select a player above to view their profile.</div>
+    </div>
+  </div>
+
+  <!-- LEADERBOARD TAB -->
+  <div id="tab-leaderboard" class="panel">
+    <div class="lb-actions-row">
+      <button class="btn btn-primary" onclick="archiveTournament()">📦 ARCHIVE &amp; RESET TOURNAMENT</button>
+      <button class="btn btn-danger" onclick="clearHistory()">🗑 CLEAR HISTORY</button>
+    </div>
+    <div id="lb-archive-info" style="margin-bottom:20px"></div>
+
+    <div class="lb-grid">
+      <!-- AUTO LEADERBOARD -->
+      <div>
+        <div class="section-title">AUTO — BY WIN RATE</div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:14px;letter-spacing:1px">Ranked by lifetime wins · updates automatically</div>
+        <div id="lb-auto"></div>
+      </div>
+      <!-- MANUAL LEADERBOARD -->
+      <div>
+        <div class="section-title">MANUAL — SKILL RANK <span style="font-family:'Share Tech Mono';font-size:9px;color:var(--muted);letter-spacing:1px">drag to reorder</span></div>
+        <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:14px;letter-spacing:1px">Your personal skill ranking — drag rows to set order</div>
+        <div id="lb-manual"></div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn btn-primary" onclick="saveManualRanking()">SAVE RANKING</button>
+          <button class="btn btn-orange" onclick="resetManualToAuto()">RESET TO AUTO</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOURNAMENT HISTORY -->
+    <div style="margin-top:36px">
+      <div class="section-title">TOURNAMENT HISTORY</div>
+      <div id="lb-history"></div>
     </div>
   </div>
 
