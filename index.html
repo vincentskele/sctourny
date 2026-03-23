@@ -536,6 +536,112 @@
     .bracket { min-width: 600px; }
   }
 
+  /* LEADERBOARD */
+  .lb-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 32px;
+  }
+  @media (max-width: 700px) { .lb-grid { grid-template-columns: 1fr; } }
+  .lb-actions-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+
+  .lb-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .lb-row:hover { border-color: var(--accent); }
+  .lb-row.dragging {
+    opacity: 0.4;
+    border-color: var(--accent);
+  }
+  .lb-row.drag-over {
+    border-color: var(--accent2);
+    box-shadow: 0 0 12px rgba(255,107,53,0.3);
+    transform: scale(1.01);
+  }
+  .lb-rank {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    font-weight: 900;
+    min-width: 32px;
+    text-align: center;
+  }
+  .lb-rank.r1 { color: #ffd700; filter: drop-shadow(0 0 6px rgba(255,215,0,0.6)); }
+  .lb-rank.r2 { color: #c0c0c0; }
+  .lb-rank.r3 { color: #cd7f32; }
+  .lb-rank.rn { color: var(--muted); }
+  .lb-name {
+    flex: 1;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .lb-stats {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 11px;
+  }
+  .lb-w { color: var(--win); font-family: 'Orbitron', monospace; font-weight: 700; }
+  .lb-l { color: var(--lose); font-family: 'Orbitron', monospace; }
+  .lb-pct {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    min-width: 38px;
+    text-align: right;
+  }
+  .drag-handle {
+    cursor: grab;
+    color: var(--muted);
+    font-size: 14px;
+    padding: 0 4px;
+    user-select: none;
+  }
+  .drag-handle:active { cursor: grabbing; }
+
+  .history-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px 20px;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    flex-wrap: wrap;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  }
+  .history-card::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 10px; height: 10px;
+    border-top: 1px solid var(--accent2);
+    border-right: 1px solid var(--accent2);
+  }
+  .history-card { position: relative; }
+  .history-meta {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+  .history-champ {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--protoss);
+  }
+
   /* PROFILE PAGE */
   .profile-header {
     display: flex;
@@ -925,6 +1031,12 @@ function emptyState(tourney) {
   return { players: [], teams: [], matches: [], bracket: [], format: 'single', bestOf: 3, tourney };
 }
 
+// Lifetime data stored separately per mode
+let lifetime = {
+  '1v1': { history: [], manualRanking: [] },
+  '2v2': { history: [], manualRanking: [] }
+};
+
 // Two completely separate states
 let states = {
   '1v1': emptyState('SC2 1v1 Tournament'),
@@ -979,9 +1091,8 @@ function setSyncStatus(status, msg) {
 async function save() {
   isSaving = true;
   setSyncStatus('syncing');
-  // Always save both states together
   states[currentMode] = state;
-  const payload = { states };
+  const payload = { states, lifetime };
   try {
     const resp = await fetch(SHEETS_URL, {
       method: 'POST',
@@ -1008,12 +1119,14 @@ async function load() {
     if (text && text !== '{}' && text.trim() !== '') {
       const remote = JSON.parse(text);
       if (remote && remote.states) {
-        // New dual-state format
         states['1v1'] = { ...emptyState('SC2 1v1 Tournament'), ...(remote.states['1v1'] || {}) };
         states['2v2'] = { ...emptyState('SC2 2v2 Tournament'), ...(remote.states['2v2'] || {}) };
       } else if (remote && remote.players !== undefined) {
-        // Legacy single-state — migrate into 2v2
         states['2v2'] = { ...emptyState('SC2 2v2 Tournament'), ...remote };
+      }
+      if (remote && remote.lifetime) {
+        lifetime['1v1'] = { history: [], manualRanking: [], ...remote.lifetime['1v1'] };
+        lifetime['2v2'] = { history: [], manualRanking: [], ...remote.lifetime['2v2'] };
       }
       state = states[currentMode];
       setSyncStatus('saved', 'LOADED');
@@ -1023,16 +1136,12 @@ async function load() {
     const backup = localStorage.getItem('sc2tourney_backup');
     if (backup) {
       const bd = JSON.parse(backup);
-      if (bd.states) {
-        states = { ...states, ...bd.states };
-      } else {
-        states['2v2'] = { ...emptyState('SC2 2v2 Tournament'), ...bd };
-      }
+      if (bd.states) { states = { ...states, ...bd.states }; }
+      else { states['2v2'] = { ...emptyState('SC2 2v2 Tournament'), ...bd }; }
+      if (bd.lifetime) lifetime = { ...lifetime, ...bd.lifetime };
       state = states[currentMode];
       setSyncStatus('offline', 'LOCAL DATA');
-    } else {
-      setSyncStatus('saved', 'NEW TOURNEY');
-    }
+    } else { setSyncStatus('saved', 'NEW TOURNEY'); }
   } catch(e) {
     setSyncStatus('error', 'LOAD FAILED');
     try {
@@ -1041,6 +1150,7 @@ async function load() {
         const bd = JSON.parse(backup);
         if (bd.states) states = { ...states, ...bd.states };
         else states['2v2'] = { ...emptyState('SC2 2v2 Tournament'), ...bd };
+        if (bd.lifetime) lifetime = { ...lifetime, ...bd.lifetime };
         state = states[currentMode];
       }
     } catch(_) {}
@@ -1061,9 +1171,14 @@ function startPolling() {
       const remote = JSON.parse(text);
       const remoteStates = remote.states || { '2v2': remote };
       const remoteActive = remoteStates[currentMode];
-      if (remoteActive && JSON.stringify(remoteActive) !== JSON.stringify(state)) {
+      const remoteLifetime = remote.lifetime || {};
+      const changed = (remoteActive && JSON.stringify(remoteActive) !== JSON.stringify(state))
+                   || (remoteLifetime[currentMode] && JSON.stringify(remoteLifetime[currentMode]) !== JSON.stringify(lifetime[currentMode]));
+      if (changed) {
         states['1v1'] = { ...emptyState('SC2 1v1 Tournament'), ...(remoteStates['1v1'] || {}) };
         states['2v2'] = { ...emptyState('SC2 2v2 Tournament'), ...(remoteStates['2v2'] || {}) };
+        if (remoteLifetime['1v1']) lifetime['1v1'] = { history: [], manualRanking: [], ...remoteLifetime['1v1'] };
+        if (remoteLifetime['2v2']) lifetime['2v2'] = { history: [], manualRanking: [], ...remoteLifetime['2v2'] };
         state = states[currentMode];
         setSyncStatus('saved', 'UPDATED');
         renderAll();
@@ -1834,6 +1949,230 @@ function renderProfileContent(playerId) {
   `;
 }
 
+// ===================== LEADERBOARD =====================
+let dragSrcIndex = null;
+
+function getLifetimeStats() {
+  const lt = lifetime[currentMode] || { history: [], manualRanking: [] };
+  const statsMap = {};
+
+  // Always seed from current players first so they always appear
+  (state.players || []).forEach(p => {
+    statsMap[p.id] = { id: p.id, name: p.name, race: p.race, wins: 0, losses: 0, tournaments: 0 };
+  });
+
+  const allEntries = [
+    ...lt.history,
+    { players: state.players, teams: state.teams, matches: state.matches, tourney: state.tourney, isCurrent: true }
+  ];
+
+  allEntries.forEach(entry => {
+    if (!entry.players) return;
+    // Ensure all historical players are in the map
+    entry.players.forEach(p => {
+      if (!statsMap[p.id]) statsMap[p.id] = { id: p.id, name: p.name, race: p.race, wins: 0, losses: 0, tournaments: 0 };
+      else { statsMap[p.id].name = p.name; statsMap[p.id].race = p.race; }
+      statsMap[p.id].tournaments++;
+    });
+    // Count wins/losses from completed matches
+    (entry.matches || []).filter(m => m.winner).forEach(m => {
+      const t1 = (entry.teams || []).find(t => t.id == m.team1Id);
+      const t2 = (entry.teams || []).find(t => t.id == m.team2Id);
+      if (!t1 || !t2) return;
+      const winTeam = m.winner == m.team1Id ? t1 : t2;
+      const loseTeam = m.winner == m.team1Id ? t2 : t1;
+      (winTeam.players || []).forEach(pid => { if (statsMap[pid]) statsMap[pid].wins++; });
+      (loseTeam.players || []).forEach(pid => { if (statsMap[pid]) statsMap[pid].losses++; });
+    });
+  });
+
+  return Object.values(statsMap);
+}
+
+function archiveTournament() {
+  const completedMatches = state.matches.filter(m => m.winner);
+  if (!completedMatches.length) return flash('No completed matches to archive!');
+  if (!confirm('Archive this tournament and reset for a new one? Player roster will be kept.')) return;
+
+  const lt = lifetime[currentMode];
+
+  // Find champion
+  let champion = null;
+  if (state.bracket.length) {
+    const lastRound = state.bracket[state.bracket.length - 1];
+    const finalMatch = lastRound?.[0];
+    if (finalMatch?.winner) {
+      const ct = state.teams.find(t => t.id == finalMatch.winner);
+      if (ct) champion = ct.name;
+    }
+  }
+
+  lt.history.push({
+    tourney: state.tourney || 'Tournament',
+    date: new Date().toLocaleDateString(),
+    format: state.format,
+    bestOf: state.bestOf,
+    champion,
+    players: JSON.parse(JSON.stringify(state.players)),
+    teams: JSON.parse(JSON.stringify(state.teams)),
+    matches: JSON.parse(JSON.stringify(state.matches)),
+  });
+
+  // Reset current tournament but keep players
+  const keptPlayers = [...state.players];
+  states[currentMode] = emptyState(state.tourney);
+  state = states[currentMode];
+  state.players = keptPlayers;
+
+  // Reset manual ranking to match new auto order
+  lt.manualRanking = [];
+
+  save(); renderAll();
+  flash('Tournament archived! ✓ Starting fresh.');
+}
+
+function clearHistory() {
+  if (!confirm('Clear ALL tournament history for this mode? This cannot be undone.')) return;
+  lifetime[currentMode] = { history: [], manualRanking: [] };
+  save(); renderAll();
+}
+
+function saveManualRanking() {
+  const rows = document.querySelectorAll('#lb-manual .lb-row');
+  const order = Array.from(rows).map(r => r.dataset.pid);
+  lifetime[currentMode].manualRanking = order;
+  save();
+  flash('Manual ranking saved! ✓');
+}
+
+function resetManualToAuto() {
+  lifetime[currentMode].manualRanking = [];
+  renderLeaderboard();
+  flash('Reset to auto order.');
+}
+
+function renderLeaderboard() {
+  const autoEl = document.getElementById('lb-auto');
+  const manualEl = document.getElementById('lb-manual');
+  const historyEl = document.getElementById('lb-history');
+  const infoEl = document.getElementById('lb-archive-info');
+  if (!autoEl) return;
+
+  const allStats = getLifetimeStats();
+  const lt = lifetime[currentMode];
+  const histCount = lt.history.length;
+
+  infoEl.innerHTML = histCount > 0
+    ? `<div class="alert alert-info">📊 Lifetime stats from <strong>${histCount}</strong> archived tournament${histCount !== 1 ? 's' : ''} + current tournament</div>`
+    : `<div class="alert alert-warn">No archived tournaments yet. Complete a tournament and click "Archive &amp; Reset" to start tracking lifetime stats.</div>`;
+
+  if (!allStats.length) {
+    autoEl.innerHTML = '<div class="empty-state">No players yet.</div>';
+    manualEl.innerHTML = '<div class="empty-state">No players yet.</div>';
+    historyEl.innerHTML = '<div class="empty-state">No history yet.</div>';
+    return;
+  }
+
+  // AUTO — sorted by wins desc, then win% desc
+  const autoSorted = [...allStats].sort((a, b) => {
+    if (b.wins !== a.wins) return b.wins - a.wins;
+    const apct = (a.wins + a.losses) ? a.wins / (a.wins + a.losses) : 0;
+    const bpct = (b.wins + b.losses) ? b.wins / (b.wins + b.losses) : 0;
+    return bpct - apct;
+  });
+
+  autoEl.innerHTML = autoSorted.map((p, i) => lbRowHtml(p, i, false)).join('');
+
+  // MANUAL — use saved order or fall back to auto
+  let manualOrder;
+  if (lt.manualRanking && lt.manualRanking.length) {
+    // Merge: show saved order, append any new players at bottom
+    const saved = lt.manualRanking.map(pid => allStats.find(p => p.id == pid)).filter(Boolean);
+    const newPlayers = allStats.filter(p => !lt.manualRanking.includes(String(p.id)));
+    manualOrder = [...saved, ...newPlayers];
+  } else {
+    manualOrder = [...autoSorted];
+  }
+
+  manualEl.innerHTML = manualOrder.map((p, i) => lbRowHtml(p, i, true)).join('');
+  attachDragHandlers();
+
+  // HISTORY
+  if (!lt.history.length) {
+    historyEl.innerHTML = '<div class="empty-state">No archived tournaments yet.</div>';
+  } else {
+    historyEl.innerHTML = [...lt.history].reverse().map((h, i) => `
+      <div class="history-card">
+        <div style="flex:1">
+          <div style="font-family:'Orbitron',monospace;font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">${escHtml(h.tourney)}</div>
+          <div class="history-meta">${h.date} &nbsp;·&nbsp; ${h.format?.toUpperCase() || 'SINGLE ELIM'} &nbsp;·&nbsp; BO${h.bestOf || 3} &nbsp;·&nbsp; ${h.players?.length || 0} players</div>
+        </div>
+        ${h.champion ? `<div><div style="font-size:10px;font-family:'Share Tech Mono',monospace;color:var(--muted);letter-spacing:1px;margin-bottom:3px">🏆 CHAMPION</div><div class="history-champ">${escHtml(h.champion)}</div></div>` : ''}
+        <div style="text-align:right">
+          <div style="font-family:'Share Tech Mono',monospace;font-size:10px;color:var(--muted)">${h.matches?.filter(m => m.winner).length || 0} matches played</div>
+        </div>
+      </div>`).join('');
+  }
+}
+
+function lbRowHtml(p, i, draggable) {
+  const total = p.wins + p.losses;
+  const pct = total > 0 ? Math.round(p.wins / total * 100) : 0;
+  const rankClass = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : 'rn';
+  const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i+1}`;
+  return `<div class="lb-row" data-pid="${p.id}" ${draggable ? 'draggable="true"' : ''}>
+    ${draggable ? '<span class="drag-handle" title="Drag to reorder">⠿</span>' : ''}
+    <span class="lb-rank ${rankClass}">${medal}</span>
+    <span class="lb-name">
+      <span class="race-badge race-${p.race}" style="font-size:8px;margin-right:6px">${p.race}</span>${escHtml(p.name)}
+    </span>
+    <div class="lb-stats">
+      <span class="lb-w">${p.wins}W</span>
+      <span class="lb-l">${p.losses}L</span>
+      <span class="lb-pct">${pct}%</span>
+    </div>
+  </div>`;
+}
+
+function attachDragHandlers() {
+  const rows = document.querySelectorAll('#lb-manual .lb-row');
+  rows.forEach((row, i) => {
+    row.addEventListener('dragstart', e => {
+      dragSrcIndex = i;
+      setTimeout(() => row.classList.add('dragging'), 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('dragging');
+      document.querySelectorAll('#lb-manual .lb-row').forEach(r => r.classList.remove('drag-over'));
+    });
+    row.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      document.querySelectorAll('#lb-manual .lb-row').forEach(r => r.classList.remove('drag-over'));
+      row.classList.add('drag-over');
+    });
+    row.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragSrcIndex === null || dragSrcIndex === i) return;
+      const container = document.getElementById('lb-manual');
+      const allRows = Array.from(container.querySelectorAll('.lb-row'));
+      const src = allRows[dragSrcIndex];
+      const target = allRows[i];
+      if (dragSrcIndex < i) container.insertBefore(src, target.nextSibling);
+      else container.insertBefore(src, target);
+      // Re-number ranks visually
+      Array.from(container.querySelectorAll('.lb-row')).forEach((r, idx) => {
+        const rankEl = r.querySelector('.lb-rank');
+        rankEl.className = 'lb-rank ' + (idx === 0 ? 'r1' : idx === 1 ? 'r2' : idx === 2 ? 'r3' : 'rn');
+        rankEl.textContent = idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `#${idx+1}`;
+      });
+      document.querySelectorAll('#lb-manual .lb-row').forEach(r => r.classList.remove('drag-over'));
+      dragSrcIndex = null;
+    });
+  });
+}
+
 // ===================== HELPERS =====================
 function switchTabById(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -1857,6 +2196,7 @@ function renderAll() {
   renderSchedule();
   renderStandings();
   renderProfiles();
+  renderLeaderboard();
 }
 
 function getPlayer(id) { return state.players.find(p => p.id == id); }
