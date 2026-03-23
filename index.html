@@ -688,6 +688,39 @@
     background: rgba(0,212,255,0.1);
   }
 
+  /* MODE SWITCHER */
+  .mode-btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    padding: 8px 28px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.25s;
+    clip-path: polygon(8px 0%,100% 0%,calc(100% - 8px) 100%,0% 100%);
+  }
+  .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .mode-btn-active {
+    background: linear-gradient(135deg, rgba(0,212,255,0.2), rgba(0,212,255,0.05));
+    border-color: var(--accent);
+    color: var(--accent);
+    box-shadow: var(--glow);
+  }
+  .mode-badge {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    padding: 2px 8px;
+    border: 1px solid var(--accent2);
+    color: var(--accent2);
+    background: rgba(255,107,53,0.1);
+    vertical-align: middle;
+    margin-left: 8px;
+  }
+
   /* SCROLLBAR */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
@@ -698,14 +731,18 @@
 <body>
 
 <header>
-  <div class="logo-line">⚔ SC2 2v2 TOURNAMENT</div>
-  <div class="logo-sub">COMMAND &nbsp;·&nbsp; CONQUER &nbsp;·&nbsp; DOMINATE</div>
-  <div id="sync-status" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-top:10px">⟳ CONNECTING...</div>
+  <div class="logo-line" id="header-title">⚔ SC2 2v2 TOURNAMENT</div>
+  <div class="logo-sub" id="header-sub">COMMAND &nbsp;·&nbsp; CONQUER &nbsp;·&nbsp; DOMINATE</div>
+  <div style="margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px">
+    <button id="mode-1v1" class="mode-btn" onclick="switchMode('1v1')">1V1</button>
+    <button id="mode-2v2" class="mode-btn mode-btn-active" onclick="switchMode('2v2')">2V2</button>
+  </div>
+  <div id="sync-status" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-top:8px">⟳ CONNECTING...</div>
 </header>
 
 <div class="tabs">
   <div class="tab active" onclick="switchTab('setup')">SETUP</div>
-  <div class="tab" onclick="switchTab('teams')">TEAMS</div>
+  <div class="tab" onclick="switchTab('teams')" id="tab-btn-teams">TEAMS</div>
   <div class="tab" onclick="switchTab('bracket')">BRACKET</div>
   <div class="tab" onclick="switchTab('schedule')">SCHEDULE</div>
   <div class="tab" onclick="switchTab('standings')">STANDINGS</div>
@@ -773,22 +810,22 @@
   <!-- TEAMS TAB -->
   <div id="tab-teams" class="panel">
     <div class="actions-row">
-      <button class="btn btn-primary" onclick="autoTeams()">⚡ AUTO-GENERATE TEAMS</button>
-      <button class="btn btn-orange" onclick="clearTeams()">CLEAR TEAMS</button>
+      <button class="btn btn-primary" onclick="autoTeams()">⚡ AUTO-GENERATE</button>
+      <button class="btn btn-orange" onclick="clearTeams()">CLEAR</button>
     </div>
 
     <div class="card">
-      <div class="section-title">CREATE TEAM MANUALLY</div>
+      <div class="section-title" id="create-team-title">CREATE TEAM MANUALLY</div>
       <div class="form-row">
         <div class="form-group">
-          <label>TEAM NAME</label>
+          <label id="team-name-label">TEAM NAME</label>
           <input type="text" id="team-name-input" placeholder="Team Alpha">
         </div>
         <div class="form-group">
           <label>PLAYER 1</label>
           <select id="team-p1"></select>
         </div>
-        <div class="form-group">
+        <div class="form-group" id="team-p2-group">
           <label>PLAYER 2</label>
           <select id="team-p2"></select>
         </div>
@@ -798,7 +835,7 @@
       </div>
     </div>
 
-    <div class="section-title">TEAMS (<span id="team-count">0</span>)</div>
+    <div class="section-title"><span id="teams-label">TEAMS</span> (<span id="team-count">0</span>)</div>
     <div id="teams-list" class="teams-grid">
       <div class="empty-state" style="grid-column:1/-1">No teams yet.</div>
     </div>
@@ -849,15 +886,41 @@
 // ===================== STATE =====================
 const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwRjyo846Jt8pzah83bX_8J_deluqUDVlum3V74OcCRrmowqeZoMHHTOYQh2QUGXVba/exec';
 
-let state = {
-  players: [],
-  teams: [],
-  matches: [],
-  bracket: [],
-  format: 'single',
-  bestOf: 3,
-  tourney: 'SC2 Tournament'
+function emptyState(tourney) {
+  return { players: [], teams: [], matches: [], bracket: [], format: 'single', bestOf: 3, tourney };
+}
+
+// Two completely separate states
+let states = {
+  '1v1': emptyState('SC2 1v1 Tournament'),
+  '2v2': emptyState('SC2 2v2 Tournament')
 };
+
+let currentMode = '2v2'; // active mode
+let state = states[currentMode]; // convenience alias — always points to active state
+
+function switchMode(mode) {
+  if (mode === currentMode) return;
+  currentMode = mode;
+  state = states[currentMode];
+  activeProfileId = null;
+
+  // Update UI
+  document.getElementById('mode-1v1').className = 'mode-btn' + (mode === '1v1' ? ' mode-btn-active' : '');
+  document.getElementById('mode-2v2').className = 'mode-btn' + (mode === '2v2' ? ' mode-btn-active' : '');
+  document.getElementById('header-title').textContent = mode === '1v1' ? '⚔ SC2 1V1 TOURNAMENT' : '⚔ SC2 2V2 TOURNAMENT';
+  document.getElementById('header-sub').innerHTML = mode === '1v1'
+    ? 'SOLO &nbsp;·&nbsp; SKILL &nbsp;·&nbsp; SUPREMACY'
+    : 'COMMAND &nbsp;·&nbsp; CONQUER &nbsp;·&nbsp; DOMINATE';
+
+  // Update teams tab label
+  const tabBtn = document.getElementById('tab-btn-teams');
+  if (tabBtn) tabBtn.textContent = mode === '1v1' ? 'PLAYERS' : 'TEAMS';
+
+  // Switch active tab back to setup for clarity
+  switchTabById('setup');
+  renderAll();
+}
 
 let isSaving = false;
 let lastSaveTime = 0;
@@ -881,17 +944,19 @@ function setSyncStatus(status, msg) {
 async function save() {
   isSaving = true;
   setSyncStatus('syncing');
+  // Always save both states together
+  states[currentMode] = state;
+  const payload = { states };
   try {
     const resp = await fetch(SHEETS_URL, {
       method: 'POST',
-      body: JSON.stringify(state),
+      body: JSON.stringify(payload),
       headers: { 'Content-Type': 'text/plain' }
     });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     lastSaveTime = Date.now();
     setSyncStatus('saved');
-    // Also cache locally as fallback
-    try { localStorage.setItem('sc2tourney_backup', JSON.stringify(state)); } catch(e) {}
+    try { localStorage.setItem('sc2tourney_backup', JSON.stringify(payload)); } catch(e) {}
   } catch(e) {
     setSyncStatus('error', 'SAVE FAILED');
     console.error('Save error:', e);
@@ -907,21 +972,43 @@ async function load() {
     const text = await resp.text();
     if (text && text !== '{}' && text.trim() !== '') {
       const remote = JSON.parse(text);
-      if (remote && typeof remote === 'object') {
-        state = { ...state, ...remote };
-        setSyncStatus('saved', 'LOADED');
-        renderAll();
-        return;
+      if (remote && remote.states) {
+        // New dual-state format
+        states['1v1'] = { ...emptyState('SC2 1v1 Tournament'), ...(remote.states['1v1'] || {}) };
+        states['2v2'] = { ...emptyState('SC2 2v2 Tournament'), ...(remote.states['2v2'] || {}) };
+      } else if (remote && remote.players !== undefined) {
+        // Legacy single-state — migrate into 2v2
+        states['2v2'] = { ...emptyState('SC2 2v2 Tournament'), ...remote };
       }
+      state = states[currentMode];
+      setSyncStatus('saved', 'LOADED');
+      renderAll();
+      return;
     }
-    // Try local backup
     const backup = localStorage.getItem('sc2tourney_backup');
-    if (backup) { state = JSON.parse(backup); setSyncStatus('offline', 'LOCAL DATA'); }
-    else setSyncStatus('saved', 'NEW TOURNEY');
+    if (backup) {
+      const bd = JSON.parse(backup);
+      if (bd.states) {
+        states = { ...states, ...bd.states };
+      } else {
+        states['2v2'] = { ...emptyState('SC2 2v2 Tournament'), ...bd };
+      }
+      state = states[currentMode];
+      setSyncStatus('offline', 'LOCAL DATA');
+    } else {
+      setSyncStatus('saved', 'NEW TOURNEY');
+    }
   } catch(e) {
     setSyncStatus('error', 'LOAD FAILED');
-    const backup = localStorage.getItem('sc2tourney_backup');
-    if (backup) { try { state = JSON.parse(backup); } catch(_) {} }
+    try {
+      const backup = localStorage.getItem('sc2tourney_backup');
+      if (backup) {
+        const bd = JSON.parse(backup);
+        if (bd.states) states = { ...states, ...bd.states };
+        else states['2v2'] = { ...emptyState('SC2 2v2 Tournament'), ...bd };
+        state = states[currentMode];
+      }
+    } catch(_) {}
     console.error('Load error:', e);
   }
   renderAll();
@@ -937,13 +1024,17 @@ function startPolling() {
       const text = await resp.text();
       if (!text || text === '{}') return;
       const remote = JSON.parse(text);
-      if (remote && JSON.stringify(remote) !== JSON.stringify(state)) {
-        state = { ...state, ...remote };
+      const remoteStates = remote.states || { '2v2': remote };
+      const remoteActive = remoteStates[currentMode];
+      if (remoteActive && JSON.stringify(remoteActive) !== JSON.stringify(state)) {
+        states['1v1'] = { ...emptyState('SC2 1v1 Tournament'), ...(remoteStates['1v1'] || {}) };
+        states['2v2'] = { ...emptyState('SC2 2v2 Tournament'), ...(remoteStates['2v2'] || {}) };
+        state = states[currentMode];
         setSyncStatus('saved', 'UPDATED');
         renderAll();
       }
-    } catch(e) { /* silent poll fail */ }
-  }, 10000); // poll every 10s
+    } catch(e) { /* silent */ }
+  }, 10000);
 }
 
 load();
@@ -984,6 +1075,16 @@ function renderPlayers() {
 
 // ===================== TEAMS =====================
 function autoTeams() {
+  if (currentMode === '1v1') {
+    // In 1v1 each player IS their own team
+    if (!state.players.length) return flash('No players added yet!');
+    clearTeams(true);
+    state.players.forEach(p => {
+      state.teams.push({ id: p.id + 10000, name: p.name, players: [p.id], wins: 0, losses: 0 });
+    });
+    save(); renderAll();
+    return;
+  }
   if (state.players.length < 2) return flash('Need at least 2 players!');
   if (state.players.length % 2 !== 0) return flash('Need an even number of players for 2v2!');
   clearTeams(true);
@@ -1004,6 +1105,17 @@ function autoTeams() {
 function createTeam() {
   const name = document.getElementById('team-name-input').value.trim();
   const p1id = parseInt(document.getElementById('team-p1').value);
+
+  if (currentMode === '1v1') {
+    if (!p1id) return flash('Select a player!');
+    if (state.teams.find(t => t.players.includes(p1id))) return flash('Player already entered!');
+    const p1 = getPlayer(p1id);
+    state.teams.push({ id: Date.now(), name: name || p1.name, players: [p1id], wins: 0, losses: 0 });
+    document.getElementById('team-name-input').value = '';
+    save(); renderAll();
+    return;
+  }
+
   const p2id = parseInt(document.getElementById('team-p2').value);
   if (!name) return flash('Enter a team name!');
   if (!p1id || !p2id) return flash('Select both players!');
@@ -1035,30 +1147,49 @@ function renderTeams() {
   const tc = document.getElementById('team-count');
   tc.textContent = state.teams.length;
 
+  const is1v1 = currentMode === '1v1';
+
+  // Update labels
+  const titleEl = document.getElementById('create-team-title');
+  const labelEl = document.getElementById('teams-label');
+  const nameLabel = document.getElementById('team-name-label');
+  if (titleEl) titleEl.textContent = is1v1 ? 'ADD ENTRANT' : 'CREATE TEAM MANUALLY';
+  if (labelEl) labelEl.textContent = is1v1 ? 'ENTRANTS' : 'TEAMS';
+  if (nameLabel) nameLabel.textContent = is1v1 ? 'DISPLAY NAME (optional)' : 'TEAM NAME';
+
+  // Show/hide player 2
+  const p2group = document.getElementById('team-p2-group');
+  if (p2group) p2group.style.display = is1v1 ? 'none' : '';
+
   // Update player selects
-  const available = state.players.filter(p =>
-    !state.teams.find(t => t.players.includes(p.id))
-  );
+  const taken = is1v1
+    ? state.teams.flatMap(t => t.players)
+    : state.teams.flatMap(t => t.players);
+  const available = state.players.filter(p => !taken.includes(p.id));
+
   ['team-p1','team-p2'].forEach(id => {
     const sel = document.getElementById(id);
+    if (!sel) return;
     sel.innerHTML = '<option value="">-- select --</option>' +
       available.map(p => `<option value="${p.id}">${escHtml(p.name)} (${raceName(p.race)})</option>`).join('');
   });
 
   if (!state.teams.length) {
-    el.innerHTML = '<div class="empty-state" style="grid-column:1/-1">No teams yet. Auto-generate or create manually.</div>';
+    el.innerHTML = `<div class="empty-state" style="grid-column:1/-1">${is1v1 ? 'No entrants yet.' : 'No teams yet. Auto-generate or create manually.'}</div>`;
     return;
   }
+
   el.innerHTML = state.teams.map(t => {
-    const p1 = getPlayer(t.players[0]), p2 = getPlayer(t.players[1]);
+    const p1 = getPlayer(t.players[0]);
+    const p2 = !is1v1 ? getPlayer(t.players[1]) : null;
     return `<div class="team-card">
       <div class="team-name">
         ${escHtml(t.name)}
-        <button class="remove-btn" onclick="removeTeam(${t.id})" title="Remove team">×</button>
+        <button class="remove-btn" onclick="removeTeam(${t.id})" title="Remove">×</button>
       </div>
       <div class="team-players">
         ${p1 ? `<div class="team-player"><span class="race-badge race-${p1.race}">${p1.race}</span> ${escHtml(p1.name)}</div>` : '<div class="team-player" style="color:var(--muted)">Player removed</div>'}
-        ${p2 ? `<div class="team-player"><span class="race-badge race-${p2.race}">${p2.race}</span> ${escHtml(p2.name)}</div>` : '<div class="team-player" style="color:var(--muted)">Player removed</div>'}
+        ${p2 ? `<div class="team-player"><span class="race-badge race-${p2.race}">${p2.race}</span> ${escHtml(p2.name)}</div>` : ''}
       </div>
     </div>`;
   }).join('');
@@ -1669,11 +1800,19 @@ function renderProfileContent(playerId) {
 }
 
 // ===================== HELPERS =====================
-function switchTab(id) {
+function switchTabById(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.getElementById('tab-' + id).classList.add('active');
-  event.target.classList.add('active');
+  const panel = document.getElementById('tab-' + id);
+  if (panel) panel.classList.add('active');
+  // find matching tab button by its onclick
+  document.querySelectorAll('.tab').forEach(t => {
+    if (t.getAttribute('onclick') && t.getAttribute('onclick').includes(`'${id}'`)) t.classList.add('active');
+  });
+}
+
+function switchTab(id) {
+  switchTabById(id);
 }
 
 function renderAll() {
