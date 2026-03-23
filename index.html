@@ -529,6 +529,8 @@
     color: var(--muted);
   }
 
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
   @media (max-width: 500px) {
     .form-row { flex-direction: column; }
     .bracket { min-width: 600px; }
@@ -546,6 +548,7 @@
 <header>
   <div class="logo-line">⚔ SC2 2v2 TOURNAMENT</div>
   <div class="logo-sub">COMMAND &nbsp;·&nbsp; CONQUER &nbsp;·&nbsp; DOMINATE</div>
+  <div id="sync-status" style="font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:2px;color:var(--muted);margin-top:10px">⟳ CONNECTING...</div>
 </header>
 
 <div class="tabs">
@@ -680,27 +683,107 @@
 
 <script>
 // ===================== STATE =====================
+const SHEETS_URL = 'https://script.google.com/macros/s/AKfycbwRjyo846Jt8pzah83bX_8J_deluqUDVlum3V74OcCRrmowqeZoMHHTOYQh2QUGXVba/exec';
+
 let state = {
   players: [],
   teams: [],
-  matches: [],  // {id, team1, team2, score1, score2, winner, round, type}
-  bracket: [],  // rounds array for single elim
+  matches: [],
+  bracket: [],
   format: 'single',
   bestOf: 3,
   tourney: 'SC2 Tournament'
 };
 
-// Persist to localStorage
-function save() {
-  try { localStorage.setItem('sc2tourney', JSON.stringify(state)); } catch(e) {}
+let isSaving = false;
+let lastSaveTime = 0;
+let pollInterval = null;
+
+function setSyncStatus(status, msg) {
+  const el = document.getElementById('sync-status');
+  if (!el) return;
+  const configs = {
+    syncing:  { color: 'var(--accent)',  icon: '⟳', text: msg || 'SYNCING...' },
+    saved:    { color: 'var(--win)',     icon: '✓', text: msg || 'SYNCED' },
+    loading:  { color: 'var(--muted)',   icon: '⟳', text: msg || 'LOADING...' },
+    error:    { color: 'var(--lose)',    icon: '✕', text: msg || 'SYNC ERROR' },
+    offline:  { color: 'var(--accent2)', icon: '⚠', text: msg || 'OFFLINE' },
+  };
+  const c = configs[status] || configs.saved;
+  el.style.color = c.color;
+  el.innerHTML = `<span style="animation:${status==='syncing'||status==='loading'?'spin 1s linear infinite':'none'};display:inline-block">${c.icon}</span> ${c.text}`;
 }
-function load() {
+
+async function save() {
+  isSaving = true;
+  setSyncStatus('syncing');
   try {
-    const d = localStorage.getItem('sc2tourney');
-    if (d) state = JSON.parse(d);
-  } catch(e) {}
+    const resp = await fetch(SHEETS_URL, {
+      method: 'POST',
+      body: JSON.stringify(state),
+      headers: { 'Content-Type': 'text/plain' }
+    });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    lastSaveTime = Date.now();
+    setSyncStatus('saved');
+    // Also cache locally as fallback
+    try { localStorage.setItem('sc2tourney_backup', JSON.stringify(state)); } catch(e) {}
+  } catch(e) {
+    setSyncStatus('error', 'SAVE FAILED');
+    console.error('Save error:', e);
+  }
+  isSaving = false;
 }
+
+async function load() {
+  setSyncStatus('loading');
+  try {
+    const resp = await fetch(SHEETS_URL + '?t=' + Date.now());
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const text = await resp.text();
+    if (text && text !== '{}' && text.trim() !== '') {
+      const remote = JSON.parse(text);
+      if (remote && typeof remote === 'object') {
+        state = { ...state, ...remote };
+        setSyncStatus('saved', 'LOADED');
+        renderAll();
+        return;
+      }
+    }
+    // Try local backup
+    const backup = localStorage.getItem('sc2tourney_backup');
+    if (backup) { state = JSON.parse(backup); setSyncStatus('offline', 'LOCAL DATA'); }
+    else setSyncStatus('saved', 'NEW TOURNEY');
+  } catch(e) {
+    setSyncStatus('error', 'LOAD FAILED');
+    const backup = localStorage.getItem('sc2tourney_backup');
+    if (backup) { try { state = JSON.parse(backup); } catch(_) {} }
+    console.error('Load error:', e);
+  }
+  renderAll();
+}
+
+function startPolling() {
+  if (pollInterval) clearInterval(pollInterval);
+  pollInterval = setInterval(async () => {
+    if (isSaving) return;
+    try {
+      const resp = await fetch(SHEETS_URL + '?t=' + Date.now());
+      if (!resp.ok) return;
+      const text = await resp.text();
+      if (!text || text === '{}') return;
+      const remote = JSON.parse(text);
+      if (remote && JSON.stringify(remote) !== JSON.stringify(state)) {
+        state = { ...state, ...remote };
+        setSyncStatus('saved', 'UPDATED');
+        renderAll();
+      }
+    } catch(e) { /* silent poll fail */ }
+  }, 10000); // poll every 10s
+}
+
 load();
+setTimeout(startPolling, 3000);
 
 // ===================== PLAYERS =====================
 function addPlayer() {
