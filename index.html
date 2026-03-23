@@ -536,6 +536,158 @@
     .bracket { min-width: 600px; }
   }
 
+  /* PROFILE PAGE */
+  .profile-header {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+    margin-bottom: 24px;
+    position: relative;
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+    flex-wrap: wrap;
+  }
+  .profile-header::before {
+    content: '';
+    position: absolute;
+    top: 0; right: 0;
+    width: 20px; height: 20px;
+    border-top: 1px solid var(--accent);
+    border-right: 1px solid var(--accent);
+  }
+  .profile-avatar {
+    width: 72px; height: 72px;
+    border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    background: var(--surface2);
+    flex-shrink: 0;
+    position: relative;
+  }
+  .profile-avatar::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border: 1px solid rgba(0,212,255,0.2);
+    animation: pulse-border 2s ease-in-out infinite;
+  }
+  @keyframes pulse-border {
+    0%,100% { opacity: 0.3; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+  }
+  .profile-info { flex: 1; min-width: 160px; }
+  .profile-name {
+    font-family: 'Orbitron', monospace;
+    font-size: clamp(18px, 4vw, 28px);
+    font-weight: 900;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+  .profile-meta {
+    display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .profile-stats-row {
+    display: flex; gap: 16px; flex-wrap: wrap;
+  }
+  .profile-stat {
+    text-align: center;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 10px 18px;
+    clip-path: polygon(4px 0%,100% 0%,calc(100% - 4px) 100%,0% 100%);
+  }
+  .profile-stat-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 22px;
+    font-weight: 700;
+  }
+  .profile-stat-lbl {
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+  }
+  .winrate-bar-wrap {
+    margin-top: 12px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .winrate-bar {
+    flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; max-width: 200px;
+  }
+  .winrate-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--win));
+    border-radius: 3px;
+    transition: width 0.6s ease;
+  }
+  .winrate-label {
+    font-family: 'Orbitron', monospace;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .profile-section { margin-bottom: 28px; }
+
+  .matchup-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Share Tech Mono', monospace;
+    font-size: 13px;
+  }
+  .matchup-table th {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .matchup-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(26,58,92,0.4);
+    vertical-align: middle;
+  }
+  .matchup-table tr:hover td { background: rgba(0,212,255,0.04); }
+  .matchup-result {
+    display: inline-block;
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 9px;
+    border: 1px solid;
+    letter-spacing: 1px;
+  }
+  .result-win  { color: var(--win);  border-color: var(--win);  background: rgba(0,255,136,0.08); }
+  .result-loss { color: var(--lose); border-color: var(--lose); background: rgba(255,51,85,0.08); }
+  .result-tbd  { color: var(--muted); border-color: var(--muted); }
+  .mini-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .mini-bar { height: 4px; background: var(--border); border-radius: 2px; width: 80px; }
+  .mini-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg, var(--accent), var(--win)); }
+  .profile-player-btn {
+    font-family: 'Orbitron', monospace;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    clip-path: polygon(6px 0%,100% 0%,calc(100% - 6px) 100%,0% 100%);
+  }
+  .profile-player-btn:hover, .profile-player-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(0,212,255,0.1);
+  }
+
   /* SCROLLBAR */
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: var(--bg); }
@@ -557,6 +709,7 @@
   <div class="tab" onclick="switchTab('bracket')">BRACKET</div>
   <div class="tab" onclick="switchTab('schedule')">SCHEDULE</div>
   <div class="tab" onclick="switchTab('standings')">STANDINGS</div>
+  <div class="tab" onclick="switchTab('profiles')">PROFILES</div>
 </div>
 
 <main>
@@ -676,6 +829,17 @@
   <div id="tab-standings" class="panel">
     <div id="standings-content">
       <div class="empty-state">Complete some matches to see standings.</div>
+    </div>
+  </div>
+
+  <!-- PROFILES TAB -->
+  <div id="tab-profiles" class="panel">
+    <div id="profiles-player-select" style="margin-bottom:24px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <div style="font-family:'Orbitron',monospace;font-size:11px;letter-spacing:3px;color:var(--muted)">SELECT PLAYER</div>
+      <div id="profiles-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    </div>
+    <div id="profile-content">
+      <div class="empty-state">Select a player above to view their profile.</div>
     </div>
   </div>
 
@@ -1282,6 +1446,228 @@ function renderStandings() {
     </table>`;
 }
 
+// ===================== PROFILES =====================
+let activeProfileId = null;
+
+function renderProfiles() {
+  const btnsEl = document.getElementById('profiles-btns');
+  const contentEl = document.getElementById('profile-content');
+  if (!btnsEl || !contentEl) return;
+
+  if (!state.players.length) {
+    btnsEl.innerHTML = '';
+    contentEl.innerHTML = '<div class="empty-state">No players yet. Add players in the Setup tab.</div>';
+    return;
+  }
+
+  btnsEl.innerHTML = state.players.map(p => `
+    <button class="profile-player-btn ${activeProfileId == p.id ? 'active' : ''}"
+      onclick="selectProfile(${p.id})">
+      <span class="race-badge race-${p.race}" style="font-size:8px;margin-right:6px">${p.race}</span>${escHtml(p.name)}
+    </button>`).join('');
+
+  if (!activeProfileId && state.players.length) activeProfileId = state.players[0].id;
+  if (activeProfileId) renderProfileContent(activeProfileId);
+}
+
+function selectProfile(playerId) {
+  activeProfileId = playerId;
+  renderProfiles();
+}
+
+function renderProfileContent(playerId) {
+  const contentEl = document.getElementById('profile-content');
+  const player = getPlayer(playerId);
+  if (!player) { contentEl.innerHTML = '<div class="empty-state">Player not found.</div>'; return; }
+
+  // Find all teams this player is on
+  const playerTeams = state.teams.filter(t => t.players.includes(playerId));
+
+  // Collect all matches involving this player (via their teams)
+  const playerTeamIds = playerTeams.map(t => t.id);
+  const allMatches = state.matches.filter(m =>
+    playerTeamIds.includes(m.team1Id) || playerTeamIds.includes(m.team2Id)
+  );
+  const completedMatches = allMatches.filter(m => m.winner !== null);
+
+  // Overall stats
+  let totalWins = 0, totalLosses = 0;
+  completedMatches.forEach(m => {
+    if (playerTeamIds.includes(m.winner)) totalWins++;
+    else totalLosses++;
+  });
+  const totalPlayed = totalWins + totalLosses;
+  const overallPct = totalPlayed > 0 ? Math.round(totalWins / totalPlayed * 100) : 0;
+
+  // Team stats
+  const teamStats = playerTeams.map(team => {
+    const teamMatches = completedMatches.filter(m => m.team1Id == team.id || m.team2Id == team.id);
+    const tw = teamMatches.filter(m => m.winner == team.id).length;
+    const tl = teamMatches.length - tw;
+    const partner = getPlayer(team.players.find(pid => pid != playerId));
+    return { team, partner, wins: tw, losses: tl, matches: teamMatches };
+  });
+
+  // Build per-opponent matchup breakdown
+  // For each completed match, find the opposing team and compute result
+  const matchupMap = {};
+  completedMatches.forEach(m => {
+    const myTeamId = playerTeamIds.includes(m.team1Id) ? m.team1Id : m.team2Id;
+    const oppTeamId = myTeamId == m.team1Id ? m.team2Id : m.team1Id;
+    const oppTeam = state.teams.find(t => t.id == oppTeamId);
+    if (!oppTeam) return;
+    const key = oppTeamId;
+    if (!matchupMap[key]) matchupMap[key] = { oppTeam, wins: 0, losses: 0, matches: [] };
+    if (m.winner == myTeamId) matchupMap[key].wins++;
+    else matchupMap[key].losses++;
+    matchupMap[key].matches.push(m);
+  });
+
+  // Pending matches too (for full schedule view)
+  const pendingMatches = allMatches.filter(m => m.winner === null);
+
+  const raceEmoji = { T: '🤖', Z: '🐛', P: '✨', R: '🎲' };
+
+  contentEl.innerHTML = `
+    <!-- PROFILE HEADER -->
+    <div class="profile-header">
+      <div class="profile-avatar">${raceEmoji[player.race] || '👤'}</div>
+      <div class="profile-info">
+        <div class="profile-name">${escHtml(player.name)}</div>
+        <div class="profile-meta">
+          <span class="race-badge race-${player.race}">${raceName(player.race)}</span>
+          <span>${playerTeams.length} team${playerTeams.length !== 1 ? 's' : ''}</span>
+          <span>${totalPlayed} match${totalPlayed !== 1 ? 'es' : ''} played</span>
+        </div>
+        <div class="winrate-bar-wrap">
+          <div class="winrate-bar"><div class="winrate-bar-fill" style="width:${overallPct}%"></div></div>
+          <span class="winrate-label" style="color:${overallPct >= 50 ? 'var(--win)' : 'var(--lose)'}">${overallPct}%</span>
+        </div>
+      </div>
+      <div class="profile-stats-row">
+        <div class="profile-stat">
+          <div class="profile-stat-val" style="color:var(--win)">${totalWins}</div>
+          <div class="profile-stat-lbl">WINS</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-val" style="color:var(--lose)">${totalLosses}</div>
+          <div class="profile-stat-lbl">LOSSES</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-val" style="color:var(--accent)">${totalPlayed}</div>
+          <div class="profile-stat-lbl">PLAYED</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TEAM RECORDS -->
+    <div class="profile-section">
+      <div class="section-title">TEAM RECORDS</div>
+      ${teamStats.length === 0
+        ? '<div class="empty-state">Not on any teams yet.</div>'
+        : `<table class="matchup-table">
+            <thead><tr>
+              <th>TEAM</th><th>PARTNER</th><th>W</th><th>L</th><th>WIN RATE</th>
+            </tr></thead>
+            <tbody>
+              ${teamStats.map(ts => {
+                const tp = ts.wins + ts.losses;
+                const pct = tp > 0 ? Math.round(ts.wins / tp * 100) : 0;
+                return `<tr>
+                  <td style="font-family:'Orbitron',monospace;font-weight:700;color:var(--accent)">${escHtml(ts.team.name)}</td>
+                  <td>${ts.partner
+                    ? `<span class="race-badge race-${ts.partner.race}" style="font-size:8px;margin-right:6px">${ts.partner.race}</span>${escHtml(ts.partner.name)}`
+                    : '<span style="color:var(--muted)">—</span>'}</td>
+                  <td style="color:var(--win);font-family:'Orbitron';font-weight:700">${ts.wins}</td>
+                  <td style="color:var(--lose);font-family:'Orbitron'">${ts.losses}</td>
+                  <td>
+                    <div class="mini-bar-wrap">
+                      <div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%"></div></div>
+                      <span style="font-family:'Orbitron';font-size:11px;color:var(--accent)">${pct}%</span>
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>`}
+    </div>
+
+    <!-- HEAD TO HEAD -->
+    <div class="profile-section">
+      <div class="section-title">HEAD-TO-HEAD vs OPPONENTS</div>
+      ${Object.keys(matchupMap).length === 0
+        ? '<div class="empty-state">No completed matches yet.</div>'
+        : `<table class="matchup-table">
+            <thead><tr>
+              <th>OPPONENT TEAM</th><th>PLAYERS</th><th>W</th><th>L</th><th>WIN RATE</th>
+            </tr></thead>
+            <tbody>
+              ${Object.values(matchupMap).sort((a,b) => (b.wins+b.losses)-(a.wins+a.losses)).map(mu => {
+                const tp = mu.wins + mu.losses;
+                const pct = tp > 0 ? Math.round(mu.wins / tp * 100) : 0;
+                const op1 = getPlayer(mu.oppTeam.players[0]);
+                const op2 = getPlayer(mu.oppTeam.players[1]);
+                return `<tr>
+                  <td style="font-family:'Orbitron',monospace;font-size:12px;font-weight:700;color:var(--accent2)">${escHtml(mu.oppTeam.name)}</td>
+                  <td style="font-size:11px;color:var(--muted)">
+                    ${op1 ? `<span class="race-badge race-${op1.race}" style="font-size:7px;margin-right:3px">${op1.race}</span>${escHtml(op1.name)}` : '?'}
+                    &nbsp;+&nbsp;
+                    ${op2 ? `<span class="race-badge race-${op2.race}" style="font-size:7px;margin-right:3px">${op2.race}</span>${escHtml(op2.name)}` : '?'}
+                  </td>
+                  <td style="color:var(--win);font-family:'Orbitron';font-weight:700">${mu.wins}</td>
+                  <td style="color:var(--lose);font-family:'Orbitron'">${mu.losses}</td>
+                  <td>
+                    <div class="mini-bar-wrap">
+                      <div class="mini-bar"><div class="mini-bar-fill" style="width:${pct}%"></div></div>
+                      <span style="font-family:'Orbitron';font-size:11px;color:${pct >= 50 ? 'var(--win)' : 'var(--lose)'}">${pct}%</span>
+                    </div>
+                  </td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>`}
+    </div>
+
+    <!-- FULL MATCH HISTORY -->
+    <div class="profile-section">
+      <div class="section-title">MATCH HISTORY</div>
+      ${allMatches.length === 0
+        ? '<div class="empty-state">No matches scheduled yet.</div>'
+        : `<table class="matchup-table">
+            <thead><tr>
+              <th>ROUND</th><th>MY TEAM</th><th>VS</th><th>OPPONENT</th><th>SCORE</th><th>RESULT</th>
+            </tr></thead>
+            <tbody>
+              ${allMatches.map(m => {
+                const myTeamId = playerTeamIds.includes(m.team1Id) ? m.team1Id : m.team2Id;
+                const oppTeamId = myTeamId == m.team1Id ? m.team2Id : m.team1Id;
+                const myTeam = state.teams.find(t => t.id == myTeamId);
+                const oppTeam = state.teams.find(t => t.id == oppTeamId);
+                const myScore = myTeamId == m.team1Id ? m.score1 : m.score2;
+                const oppScore = myTeamId == m.team1Id ? m.score2 : m.score1;
+                const won = m.winner == myTeamId;
+                const done = m.winner !== null;
+                const roundLabel = m.type === 'rr' ? 'RR' : `R${m.round}`;
+                return `<tr>
+                  <td style="color:var(--muted);font-family:'Orbitron',monospace;font-size:10px">${roundLabel}</td>
+                  <td style="font-family:'Share Tech Mono',monospace">${escHtml(myTeam?.name || '?')}</td>
+                  <td style="color:var(--accent2);font-family:'Orbitron',monospace;font-size:10px;font-weight:700">VS</td>
+                  <td style="font-family:'Share Tech Mono',monospace;color:var(--muted)">${escHtml(oppTeam?.name || '?')}</td>
+                  <td style="font-family:'Orbitron',monospace;font-size:13px">
+                    ${done ? `<span style="color:${won?'var(--win)':'var(--lose)'}">${myScore}</span><span style="color:var(--muted)"> - </span><span style="color:${!won?'var(--win)':'var(--lose)'}">${oppScore}</span>` : '<span style="color:var(--muted)">—</span>'}
+                  </td>
+                  <td>${done
+                    ? `<span class="matchup-result ${won ? 'result-win' : 'result-loss'}">${won ? 'WIN' : 'LOSS'}</span>`
+                    : '<span class="matchup-result result-tbd">TBD</span>'
+                  }</td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>`}
+    </div>
+  `;
+}
+
 // ===================== HELPERS =====================
 function switchTab(id) {
   document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
@@ -1296,6 +1682,7 @@ function renderAll() {
   renderBracket();
   renderSchedule();
   renderStandings();
+  renderProfiles();
 }
 
 function getPlayer(id) { return state.players.find(p => p.id == id); }
